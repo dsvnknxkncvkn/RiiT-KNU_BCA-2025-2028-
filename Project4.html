@@ -1,0 +1,175 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Student Fee Management Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .blink {
+            animation: blink 1s step-start infinite;
+        }
+
+        @keyframes blink {
+            50% {
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-r from-indigo-300 via-purple-300 to-pink-300 min-h-screen flex items-center justify-center">
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="bg-white p-8 rounded-2xl shadow-lg w-full max-w-sm">
+        <h2 class="text-2xl font-bold mb-6 text-center text-purple-700">Student Fee Management</h2>
+        <input id="username" type="text" placeholder="Username" class="w-full p-2 mb-4 rounded border focus:outline-none" />
+        <input id="password" type="password" placeholder="Password" class="w-full p-2 mb-4 rounded border focus:outline-none" />
+        <button onclick="login()" class="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 rounded">Login</button>
+        <p id="loginError" class="text-red-500 mt-2 hidden">Invalid username or password. Please try again.</p>
+    </div>
+
+    <!-- Dashboard Section (Hidden initially) -->
+    <div id="dashboard" class="hidden w-full max-w-6xl mx-auto p-6">
+        <h1 class="text-3xl font-bold text-center text-purple-800 mb-4">Dashboard</h1>
+
+        <!-- Add Student Form -->
+        <div class="grid md:grid-cols-3 gap-4 bg-white p-4 rounded-xl shadow">
+            <input id="studentName" type="text" placeholder="Student Name" class="p-2 border rounded" />
+            <select id="course" class="p-2 border rounded">
+                <option value="">Select Course</option>
+                <option>BBA</option>
+                <option>BCA</option>
+                <option>MCA</option>
+            </select>
+            <select id="semester" class="p-2 border rounded">
+                <option value="">Select Semester</option>
+                <option>1st</option>
+                <option>2nd</option>
+                <option>3rd</option>
+                <option>4th</option>
+                <option>5th</option>
+                <option>6th</option>
+                <option>7th</option>
+                <option>8th</option>
+            </select>
+            <input id="fee" type="number" placeholder="Enter Fee Amount" class="p-2 border rounded" />
+            <input id="photo" type="file" accept="image/*" class="p-2 border rounded" />
+            <div id="status" class="font-bold"></div>
+
+            <div class="col-span-3 flex flex-wrap gap-2 justify-center mt-4">
+                <button onclick="addStudent()" class="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded shadow-md">Add</button>
+                <button onclick="updateStudent()" class="bg-yellow-500 hover:bg-yellow-600 text-white py-2 px-4 rounded shadow-md">Update</button>
+                <button onclick="deleteStudent()" class="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded shadow-md">Delete</button>
+                <button onclick="resetForm()" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded shadow-md">Reset</button>
+                <button onclick="exportToPDF()" class="bg-purple-500 hover:bg-purple-600 text-white py-2 px-4 rounded shadow-md">Export to PDF</button>
+            </div>
+        </div>
+
+        <!-- Student Table -->
+        <div class="mt-6 bg-white rounded-xl p-4 shadow">
+            <h2 class="text-xl font-semibold mb-2">Student Records</h2>
+            <table class="table-auto w-full text-left border">
+                <thead class="bg-purple-100">
+                    <tr>
+                        <th class="p-2">Name</th>
+                        <th class="p-2">Course</th>
+                        <th class="p-2">Semester</th>
+                        <th class="p-2">Fee (₹)</th>
+                        <th class="p-2">Status</th>
+                        <th class="p-2">Photo</th>
+                    </tr>
+                </thead>
+                <tbody id="studentTable"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-5 right-5 bg-black text-white py-2 px-4 rounded shadow-lg hidden z-50"></div>
+
+    <script>
+        let students = [];
+        let selectedRow = null;
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.innerText = message;
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 3000);
+        }
+
+        function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            if (username === 'admin' && password === '1234') {
+                showToast('You have successfully logged in!');
+                document.getElementById('loginModal').style.display = 'none';
+                document.getElementById('dashboard').classList.remove('hidden');
+            } else {
+                document.getElementById('loginError').classList.remove('hidden');
+                showToast('You have entered an invalid username and password. Please try again.');
+            }
+        }
+
+        function addStudent() {
+            const name = document.getElementById('studentName').value;
+            const course = document.getElementById('course').value;
+            const semester = document.getElementById('semester').value;
+            const fee = parseInt(document.getElementById('fee').value);
+            const photo = document.getElementById('photo').files[0];
+
+            let statusColor = 'text-green-600';
+            let statusText = 'Paid';
+            if (fee > 18000) {
+                statusColor = 'text-red-600';
+                statusText = 'Unpaid';
+            } else if (fee < 18000) {
+                statusColor = 'text-yellow-600';
+                statusText = 'Not';
+            }
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const newRow = `
+              <tr>
+                <td class="p-2">${name}</td>
+                <td class="p-2">${course}</td>
+                <td class="p-2">${semester}</td>
+                <td class="p-2">₹${fee}</td>
+                <td class="p-2 blink ${statusColor}">${statusText}</td>
+                <td class="p-2"><img src="${e.target.result}" class="w-12 h-12 rounded-full" /></td>
+              </tr>
+            `;
+                document.getElementById('studentTable').innerHTML += newRow;
+                resetForm();
+                showToast('Student Added!');
+            };
+            if (photo) {
+                reader.readAsDataURL(photo);
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('studentName').value = '';
+            document.getElementById('course').value = '';
+            document.getElementById('semester').value = '';
+            document.getElementById('fee').value = '';
+            document.getElementById('photo').value = '';
+        }
+
+        function deleteStudent() {
+            document.getElementById('studentTable').innerHTML = '';
+            showToast('All records deleted.');
+        }
+
+        function updateStudent() {
+            showToast('Update functionality coming soon.');
+        }
+
+        function exportToPDF() {
+            showToast('Export to PDF triggered.');
+        }
+    </script>
+
+</body>
+</html>
